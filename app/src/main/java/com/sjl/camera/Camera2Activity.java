@@ -95,6 +95,7 @@ public class Camera2Activity extends Activity {
         public void onConfigured(@NonNull CameraCaptureSession session) {
             try {
                 cameraCaptureSession = session;
+                //自动对焦
                 previewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                 cameraCaptureSession.setRepeatingRequest(previewBuilder.build(), null, handler);
             } catch (CameraAccessException e) {
@@ -115,7 +116,12 @@ public class Camera2Activity extends Activity {
     private CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureResult partialResult) {
-//            super.onCaptureProgressed(session, request, partialResult);
+            super.onCaptureProgressed(session, request, partialResult);
+        }
+
+        @Override
+        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
             try {
                 //自动对焦
                 captureBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
@@ -124,11 +130,6 @@ public class Camera2Activity extends Activity {
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
-        }
-
-        @Override
-        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-            super.onCaptureCompleted(session, request, result);
         }
 
         @Override
@@ -240,6 +241,7 @@ public class Camera2Activity extends Activity {
                 ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();
                 byte[] data = new byte[byteBuffer.remaining()];
                 byteBuffer.get(data);
+                //保存照片
                 savePicture(data);
                 image.close();
             }

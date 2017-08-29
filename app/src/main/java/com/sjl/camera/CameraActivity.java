@@ -27,7 +27,7 @@ public class CameraActivity extends Activity {
     private SurfaceView surfaceView;
     private SurfaceHolder surfaceHolder;
     private Camera camera;
-    private int currentCameraType = Camera.CameraInfo.CAMERA_FACING_BACK;
+    private int currentCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,7 +94,7 @@ public class CameraActivity extends Activity {
             @Override
             public void granted(int requestCode) {
                 if (camera == null) {
-                    camera = Camera.open(currentCameraType);
+                    camera = Camera.open(currentCameraId);
                 }
                 startPreview(camera, surfaceHolder);
             }
@@ -137,8 +137,17 @@ public class CameraActivity extends Activity {
      * 拍照
      */
     private void takePhoto() {
-        //拍照
-        camera.takePicture(null, null, new Camera.PictureCallback() {
+        camera.takePicture(new Camera.ShutterCallback() {
+            @Override
+            public void onShutter() {
+                //按下快门
+            }
+        }, new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+
+            }
+        }, new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
                 savePicture(data);
@@ -155,16 +164,16 @@ public class CameraActivity extends Activity {
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         for (int i = 0; i < count; i++) {
             Camera.getCameraInfo(i, cameraInfo);
-            if (currentCameraType == Camera.CameraInfo.CAMERA_FACING_BACK && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            if (currentCameraId == Camera.CameraInfo.CAMERA_FACING_BACK && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 //后置变前置
                 stopPreview();
-                currentCameraType = Camera.CameraInfo.CAMERA_FACING_FRONT;
+                currentCameraId = Camera.CameraInfo.CAMERA_FACING_FRONT;
                 openCamera();
                 break;
-            } else if (currentCameraType == Camera.CameraInfo.CAMERA_FACING_FRONT && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            } else if (currentCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
                 //前置变后置
                 stopPreview();
-                currentCameraType = Camera.CameraInfo.CAMERA_FACING_BACK;
+                currentCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
                 openCamera();
                 break;
             }
@@ -186,7 +195,7 @@ public class CameraActivity extends Activity {
                     public void run() {
                         try {
                             Matrix matrix = new Matrix();
-                            matrix.setRotate(currentCameraType==Camera.CameraInfo.CAMERA_FACING_BACK?90:270);
+                            matrix.setRotate(currentCameraId==Camera.CameraInfo.CAMERA_FACING_BACK?90:270);
                             Bitmap bitmap = BitmapFactory.decodeByteArray(data,0,data.length);
                             bitmap = Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),matrix,true);
                             BitmapUtil.save(bitmap, FILEPATH + System.currentTimeMillis() + ".jpg");
