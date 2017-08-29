@@ -37,18 +37,6 @@ public class CameraActivity extends Activity {
         initView();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        initCamera();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopPreview();
-    }
-
     private void initView() {
         context = this;
         surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
@@ -56,12 +44,12 @@ public class CameraActivity extends Activity {
         surfaceHolder.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-                startPreview(getCamera(), holder);
+                openCamera();
             }
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                startPreview(getCamera(), holder);
+                startPreview(camera, holder);
             }
 
             @Override
@@ -72,7 +60,10 @@ public class CameraActivity extends Activity {
         surfaceView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getCamera().autoFocus(new Camera.AutoFocusCallback() {
+                if(camera==null){
+                    return;
+                }
+                camera.autoFocus(new Camera.AutoFocusCallback() {
                     @Override
                     public void onAutoFocus(boolean success, Camera camera) {
                         Log.i(TAG, "自动对焦：" + success);
@@ -95,38 +86,17 @@ public class CameraActivity extends Activity {
     }
 
     /**
-     * 切换摄像头
+     * 打开照相机
      */
-    private void switchCamera() {
-        int count = Camera.getNumberOfCameras();
-        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-        for (int i = 0; i < count; i++) {
-            Camera.getCameraInfo(i, cameraInfo);
-            if (currentCameraType == Camera.CameraInfo.CAMERA_FACING_BACK && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                //后置变前置
-                stopPreview();
-                currentCameraType = Camera.CameraInfo.CAMERA_FACING_FRONT;
-                startPreview(getCamera(), surfaceHolder);
-                break;
-            } else if (currentCameraType == Camera.CameraInfo.CAMERA_FACING_FRONT && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                //前置变后置
-                stopPreview();
-                currentCameraType = Camera.CameraInfo.CAMERA_FACING_BACK;
-                startPreview(getCamera(), surfaceHolder);
-                break;
-            }
-        }
-    }
-
-    /**
-     * 初始化照相机
-     */
-    private void initCamera() {
+    private void openCamera() {
         //权限请求
         PermisstionUtil.requestPermissions(context, PermisstionUtil.CAMERA, 100, "正在请求拍照权限", new PermisstionUtil.OnPermissionResult() {
             @Override
             public void granted(int requestCode) {
-                startPreview(getCamera(), surfaceHolder);
+                if (camera == null) {
+                    camera = Camera.open(currentCameraType);
+                }
+                startPreview(camera, surfaceHolder);
             }
 
             @Override
@@ -135,20 +105,12 @@ public class CameraActivity extends Activity {
             }
         });
     }
-
-    private Camera getCamera() {
-        if (camera == null) {
-            camera = Camera.open(currentCameraType);
-        }
-        return camera;
-    }
-
     /**
      * 打开预览
      */
     private void startPreview(Camera camera, SurfaceHolder surfaceHolder) {
         if (camera == null) {
-            camera = getCamera();
+            return;
         }
         try {
             camera.setDisplayOrientation(90);
@@ -160,7 +122,7 @@ public class CameraActivity extends Activity {
     }
 
     /**
-     * 释放照相机
+     * 停止预览释放相机
      */
     private void stopPreview() {
         if (camera != null) {
@@ -176,25 +138,37 @@ public class CameraActivity extends Activity {
      */
     private void takePhoto() {
         //拍照
-        camera.takePicture(new Camera.ShutterCallback() {
-            @Override
-            public void onShutter() {
-                Log.i(TAG, "onShutter");
-            }
-        }, new Camera.PictureCallback() {
+        camera.takePicture(null, null, new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
-                Log.i(TAG, "onPictureTaken raw");
-            }
-        }, new Camera.PictureCallback() {
-            @Override
-            public void onPictureTaken(byte[] data, Camera camera) {
-                Log.i(TAG, "onPictureTaken jpeg");
-
                 savePicture(data);
                 startPreview(camera, surfaceHolder);
             }
         });
+    }
+
+    /**
+     * 切换摄像头
+     */
+    private void switchCamera() {
+        int count = Camera.getNumberOfCameras();
+        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        for (int i = 0; i < count; i++) {
+            Camera.getCameraInfo(i, cameraInfo);
+            if (currentCameraType == Camera.CameraInfo.CAMERA_FACING_BACK && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                //后置变前置
+                stopPreview();
+                currentCameraType = Camera.CameraInfo.CAMERA_FACING_FRONT;
+                openCamera();
+                break;
+            } else if (currentCameraType == Camera.CameraInfo.CAMERA_FACING_FRONT && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                //前置变后置
+                stopPreview();
+                currentCameraType = Camera.CameraInfo.CAMERA_FACING_BACK;
+                openCamera();
+                break;
+            }
+        }
     }
 
     /**
@@ -235,7 +209,6 @@ public class CameraActivity extends Activity {
             }
         });
     }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
